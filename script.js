@@ -1,20 +1,29 @@
+
 document.addEventListener("DOMContentLoaded", function () {
-    const grid = document.getElementById('grid');
-    let s1Cell = [0, 0]; // Starting position of S1
-    let s2Cell = [6, 6]; // Starting position of S2
-    let s3Cell = [1, 1]; // Starting position of S3
-    let s4Cell = [5, 5]; // Starting position of S4    
-    let dCell = [3, 3]; // Starting position of D
-    let obstacleCell = [6, 3]; // Starting position of the obstacle
-    let movingUp = true; // Direction of movement for the obstacle
-    let s1MoveDistance = 1; // Movement distance for S1
-    let s2MoveDistance = 1; // Movement distance for S2
-    let dMoveDistance = 2; // Movement distance for D
-    let gameActive = true; // Tracks if the game is active
+        const grid = document.getElementById('grid');
+        const GRID_ROWS = 8; // Adjust the number of rows here
+        const GRID_COLS = 8; // Adjust the number of columns here
+    
+        // Dynamically set the grid layout based on the constants
+        grid.style.gridTemplateRows = `repeat(${GRID_ROWS}, 50px)`;
+        grid.style.gridTemplateColumns = `repeat(${GRID_COLS}, 50px)`;
+        
+        let entities = [
+            { cell: [0, 0], isIt: false, moveDistance: 2, name: 'blue', score: 0 },
+            { cell: [6, 6], isIt: false, moveDistance: 2, name: 'green', score: 0 },
+            { cell: [1, 1], isIt: false, moveDistance: 2, name: 'orange', score: 0 },
+            { cell: [5, 5], isIt: false, moveDistance: 1, name: 'purple', score: 0 },
+            { cell: [3, 3], isIt: true, moveDistance: 3, name: 'red', score: 0 }
+        ];
+        
+    let obstacleCell = [6, 3];
+    let movingUp = true;
+    let gameActive = true;
+    let transferCounter = 0;
 
     // Initialize the grid
-    for (let i = 0; i < 7; i++) {
-        for (let j = 0; j < 7; j++) {
+    for (let i = 0; i < GRID_ROWS; i++) {
+        for (let j = 0; j < GRID_COLS; j++) {
             const cell = document.createElement('div');
             cell.classList.add('cell');
             cell.dataset.row = i;
@@ -23,281 +32,238 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    updateObstacle(); // Initialize the obstacle's position
-    updateCells();
-    gameLoop();
+    
 
     function gameLoop() {
         if (!gameActive) return;
-    
-        const initialDPosition = [...dCell];
+
+        entities.forEach(entity => {
+            moveEntity(entity);
+            checkForCapture(entity);
+        });
+
         updateObstacle();
-    
-        moveS1AndCheck();
-        setTimeout(() => {
-            moveS2AndCheck();
-            setTimeout(() => {
-                moveS3AndCheck();
-                setTimeout(() => {
-                    moveS4AndCheck();
-                    setTimeout(() => {
-                        moveD();
-                        setTimeout(() => {
-                            moveD(initialDPosition);
-                            setTimeout(gameLoop, 400);
-                        }, 200);
-                    }, 200);
-                }, 200);
-            }, 200);
-        }, 200);
+        updateCells();
+        setTimeout(gameLoop, 300);
     }
-    
-
-
-    function updateCells() {
-        const cells = document.querySelectorAll('.cell');
-        cells.forEach(cell => {
-            cell.classList.remove('s1', 's2', 's3', 's4', 'd', 'obstacle');
-            cell.textContent = ''; // Clear previous numbers
-    
-            const row = parseInt(cell.dataset.row, 10);
-            const col = parseInt(cell.dataset.col, 10);
-    
-            if (isObstacleCell(row, col)) {
-                cell.classList.add('obstacle');
-            } else {
-                setCellBasedOnPosition(row, col, cell);
+    function moveEntity(entity) {
+        if (entity.isIt) {
+            // "IT" entity takes two consecutive moves
+            for (let i = 0; i < entity.moveDistance; i++) {
+                makeItMove(entity);
             }
-        });
-    }
-    
-    function setCellBasedOnPosition(row, col, cell) {
-        if (isSameCell([row, col], s1Cell)) {
-            cell.classList.add('s1');
-            cell.textContent = 'C';
-        } else if (isSameCell([row, col], s2Cell)) {
-            cell.classList.add('s2');
-            cell.textContent = 'C';
-        } else if (isSameCell([row, col], s3Cell)) {
-            cell.classList.add('s3');
-            cell.textContent = 'C';
-        } else if (isSameCell([row, col], s4Cell)) {
-            cell.classList.add('s4');
-            cell.textContent = 'C';
-        } else if (isSameCell([row, col], dCell)) {
-            cell.classList.add('d');
-            cell.textContent = 'IT';
-        }
-    }
-    
-    function moveS1AndCheck() {
-        moveS1();
-        if (isSameCell(s1Cell, dCell)) {
-            swapRoles(s1Cell, 's1');
-        }
-    }
-    
-    function moveS2AndCheck() {
-        moveS2();
-        if (isSameCell(s2Cell, dCell)) {
-            swapRoles(s2Cell, 's2');
-        }
-    }
-    
-    function moveS3AndCheck() {
-        moveS3();
-        if (isSameCell(s3Cell, dCell)) {
-            swapRoles(s3Cell, 's3');
-        }
-    }
-    
-    function moveS4AndCheck() {
-        moveS4();
-        if (isSameCell(s4Cell, dCell)) {
-            swapRoles(s4Cell, 's4');
-        }
-    }
-    
-
-    function moveS1() {
-        for (let i = 0; i < s1MoveDistance; i++) {
-            s1Cell = moveTowards(s1Cell, dCell);
-        }
-        if (isSameCell(s1Cell, dCell)) {
-            swapRoles(s1Cell, 's1');
-        }
-        updateCells();
-    }
-    
-    function moveS2() {
-        for (let i = 0; i < s2MoveDistance; i++) {
-            s2Cell = moveTowards(s2Cell, dCell);
-        }
-        if (isSameCell(s2Cell, dCell)) {
-            swapRoles(s2Cell, 's2');
-        }
-        updateCells();
-    }
-
-    
-    function moveS3() {
-        for (let i = 0; i < s1MoveDistance; i++) {
-            s3Cell = moveTowards(s3Cell, dCell);
-        }
-        if (isSameCell(s3Cell, dCell)) {
-            swapRoles(s3Cell, 's3');
-        }
-        updateCells();
-    }
-
-    function moveS4() {
-        for (let i = 0; i < s2MoveDistance; i++) {
-            s4Cell = moveTowards(s4Cell, dCell);
-        }
-        if (isSameCell(s4Cell, dCell)) {
-            swapRoles(s4Cell, 's4');
-        }
-        updateCells();
-    }
-
-    function swapRoles(capturingCell, capturingBlock) {
-        let formerDPosition = [...dCell]; // Store former D's (IT's) position
-    
-        // The capturing block becomes the new IT
-        dCell = [...capturingCell];
-    
-        // Move the former IT (D) to a random empty cell
-        let randomEmptyCell = getRandomEmptyCell();
-    
-        // Update positions of all single movers
-        if (capturingBlock !== 's1') {
-            s1Cell = (capturingBlock === 's2') ? formerDPosition : randomEmptyCell;
-        }
-        if (capturingBlock !== 's2') {
-            s2Cell = (capturingBlock === 's1') ? formerDPosition : randomEmptyCell;
-        }
-        if (capturingBlock !== 's3') {
-            s3Cell = (capturingBlock === 's4') ? formerDPosition : randomEmptyCell;
-        }
-        if (capturingBlock !== 's4') {
-            s4Cell = (capturingBlock === 's3') ? formerDPosition : randomEmptyCell;
-        }
-    
-        // Update classes and labels
-        document.querySelectorAll('.cell').forEach(cell => {
-            cell.className = 'cell'; // Reset all classes
-            const row = parseInt(cell.dataset.row, 10);
-            const col = parseInt(cell.dataset.col, 10);
-            setCellBasedOnPosition(row, col, cell);
-        });
-    }
-
-    
-
-    
-    function getRandomEmptyCell() {
-        let emptyCells = [];
-        for (let row = 0; row < 7; row++) {
-            for (let col = 0; col < 7; col++) {
-                if (!isSameCell([row, col], s1Cell) && !isSameCell([row, col], s2Cell) && !isSameCell([row, col], dCell) && !isObstacleCell(row, col)) {
-                    emptyCells.push([row, col]);
-                }
+        } else {
+            // Non-"IT" entities move towards the "IT" entity
+            for (let i = 0; i < entity.moveDistance; i++) {
+                moveToCaptureIt(entity);
             }
-        }
-        return emptyCells[Math.floor(Math.random() * emptyCells.length)];
-    }
-
-    function moveD(avoidCell) {
-        let previousPosition = [...dCell];
-    
-        for (let i = 0; i < dMoveDistance; i++) {
-            let potentialPosition = moveAwayFrom(dCell, avoidCell, s1Cell, s2Cell);
-    
-            if (!isSameCell(potentialPosition, previousPosition) && !isOccupied(potentialPosition)) {
-                dCell = potentialPosition;
-                previousPosition = [...dCell];
-            } else {
-                // If the potential position is not valid, try a different direction
-                potentialPosition = moveAwayFrom(dCell, previousPosition, s1Cell, s2Cell);
-                if (!isOccupied(potentialPosition)) {
-                    dCell = potentialPosition;
-                }
-            }
-    
-            updateCells();
+            
         }
     }
-
-    function moveTowards(currentCell, targetCell) {
-        const rowDiff = targetCell[0] - currentCell[0];
-        const colDiff = targetCell[1] - currentCell[1];
     
-        let nextRow = currentCell[0] + Math.sign(rowDiff);
-        let nextCol = currentCell[1] + Math.sign(colDiff);
+    function makeItMove(entity) {
+        let potentialMoves = [
+            [entity.cell[0] + 1, entity.cell[1]],
+            [entity.cell[0] - 1, entity.cell[1]],
+            [entity.cell[0], entity.cell[1] + 1],
+            [entity.cell[0], entity.cell[1] - 1]
+        ];
     
-        nextRow = Math.max(0, Math.min(6, nextRow));
-        nextCol = Math.max(0, Math.min(6, nextCol));
+        // Filter out invalid moves
+        potentialMoves = potentialMoves.filter(move => isValidMove(move, entity));
     
-        // Check if the next position is occupied by another single-mover or the obstacle
-        if (isValidMove([nextRow, nextCol]) && !isOccupiedBySingleMover([nextRow, nextCol], currentCell)) {
-            return [nextRow, nextCol];
-        }
-        return currentCell; // Stay in place if the next position is occupied
-    }
+        // If there are no valid moves, the "IT" entity is stuck and doesn't move
+        if (potentialMoves.length === 0) return;
     
-    function isOccupiedBySingleMover(cell, excludingCell) {
-        const otherCells = [s1Cell, s2Cell, s3Cell, s4Cell].filter(c => !isSameCell(c, excludingCell));
-        return otherCells.some(c => isSameCell(c, cell));
-    }
-    
-    
-
-    function moveAwayFrom(currentCell, avoidCell, ...otherCells) {
-        const potentialMoves = [
-            [currentCell[0] + 1, currentCell[1]],
-            [currentCell[0] - 1, currentCell[1]],
-            [currentCell[0], currentCell[1] + 1],
-            [currentCell[0], currentCell[1] - 1]
-        ].filter(move => isValidMove(move) && (avoidCell == null || !isSameCell(move, avoidCell)));
-    
-        let bestMove = currentCell;
+        // Choose the move that maximizes the distance from the closest non-"IT" entity
+        let farthestMove = entity.cell;
         let maxDistance = -Infinity;
+    
         potentialMoves.forEach(move => {
-            if (!isOccupied(move)) {
-                const totalDistance = otherCells.reduce((sum, cell) => sum + calculateDistance(move, cell), 0);
-                if (totalDistance > maxDistance) {
-                    maxDistance = totalDistance;
-                    bestMove = move;
-                }
+            let minDistanceToNonIt = Math.min(...entities.filter(e => !e.isIt).map(e => calculateDistance(move, e.cell)));
+            if (minDistanceToNonIt > maxDistance) {
+                maxDistance = minDistanceToNonIt;
+                farthestMove = move;
             }
         });
     
-        return bestMove;
-    }
-    function isOccupied(cell) {
-        return isSameCell(cell, s1Cell) || isSameCell(cell, s2Cell) || isSameCell(cell, dCell) || isObstacleCell(cell[0], cell[1]);
+        entity.cell = farthestMove;
     }
     
+    function moveToCaptureIt(entity) {
+        let itEntity = entities.find(e => e.isIt);
+        let potentialMoves = [
+            [entity.cell[0] + 1, entity.cell[1]],
+            [entity.cell[0] - 1, entity.cell[1]],
+            [entity.cell[0], entity.cell[1] + 1],
+            [entity.cell[0], entity.cell[1] - 1]
+        ];
+    
+        // Filter out invalid moves
+        potentialMoves = potentialMoves.filter(move => isValidMove(move, entity));
+    
+        // Choose the move that gets closest to the "IT" entity
+        let closestMove = entity.cell;
+        let minDistance = calculateDistance(entity.cell, itEntity.cell);
+    
+        potentialMoves.forEach(move => {
+            let distance = calculateDistance(move, itEntity.cell);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestMove = move;
+            }
+        });
+    
+        entity.cell = closestMove;
+    }
+    
+    
+    function calculateDistance(cell1, cell2) {
+        return Math.abs(cell1[0] - cell2[0]) + Math.abs(cell1[1] - cell2[1]);
+    }
+    
+    
+
+    function checkForCapture(entity) {
+        if (entity.isIt) return;
+    
+        let itEntity = entities.find(e => e.isIt);
+        if (isSameCell(entity.cell, itEntity.cell)) {
+            swapRoles(itEntity.name, entity.name); // Swapping roles and updating score
+            transferItStatus(itEntity, entity);    // Additional logic if needed
+        }
+    }
+    
+
+function transferItStatus(fromEntity, toEntity) {
+    // Transfer 'isIt' status and movement distance
+    fromEntity.isIt = false;
+    toEntity.isIt = true;
+    let tempMoveDistance = fromEntity.moveDistance;
+    fromEntity.moveDistance = toEntity.moveDistance;
+    toEntity.moveDistance = tempMoveDistance;
+
+    // Move the old "IT" to a random open position
+    moveEntityToRandomOpenPosition(fromEntity);
+
+    //increase transfer counter
+    transferCounter++
+    console.log(transferCounter)
+}
+function moveEntityToRandomOpenPosition(entity) {
+    let openPositions = [];
+
+    // Find all open positions on the grid
+    for (let i = 0; i < 7; i++) {
+        for (let j = 0; j < 7; j++) {
+            let position = [i, j];
+            if (isPositionOpen(position)) {
+                openPositions.push(position);
+            }
+        }
+    }
+
+    // Choose a random open position
+    if (openPositions.length > 0) {
+        let randomPosition = openPositions[Math.floor(Math.random() * openPositions.length)];
+        entity.cell = randomPosition;
+    }
+}
+function swapRoles(currentIt, newIt) {
+    entities.forEach(entity => {
+        if (entity.name === currentIt) {
+            entity.isIt = false;
+        }
+        if (entity.name === newIt) {
+            entity.isIt = true;
+            entity.score += 1; // Increment score for the entity that becomes 'it'
+        }
+    });
+
+    updateScoreDisplay(); // Update the score display
+}
+function updateScoreDisplay() {
+    entities.forEach(entity => {
+        let scoreElement = document.getElementById(entity.name + '-score');
+        if (scoreElement) {
+            scoreElement.textContent = `${entity.name.toUpperCase()} - Score: ${entity.score}, Movement Range: ${entity.moveDistance}`;
+        }
+    });
+}
+
+
+function isPositionOpen(position) {
+    for (let entity of entities) {
+        if (isSameCell(entity.cell, position)) {
+            return false;
+        }
+    }
+    return true;
+}
+function updateCells() {
+    const cells = document.querySelectorAll('.cell');
+    cells.forEach(cell => {
+        cell.classList.remove('blue', 'green', 'orange', 'purple', 'red', 'it');
+        entities.forEach(entity => {
+            if (isSameCell([parseInt(cell.dataset.row), parseInt(cell.dataset.col)], entity.cell)) {
+                cell.classList.add(entity.name);
+                if (entity.isIt) {
+                    cell.classList.add('it');
+                }
+            }
+        });
+    });
+
+    // Update the score display after updating cells
+    updateScoreDisplay();
+}
+
+
+    function getEntityClass(entity) {
+        // Utilize the 'name' property of the entity for the class
+        return entity.name;
+    }
+
+    function isSameCell(cell1, cell2) {
+        return cell1[0] === cell2[0] && cell1[1] === cell2[1];
+    }
+
     function updateObstacle() {
         if (obstacleCell[0] === 0) movingUp = false;
         if (obstacleCell[0] === 6) movingUp = true;
-    
+
         obstacleCell[0] += movingUp ? -1 : 1;
+        // Ensure the obstacle doesn't go out of bounds
+        obstacleCell[0] = Math.max(0, Math.min(obstacleCell[0], 6));
     }
+
+    function isValidMove(move, entity) {
+        // Check grid boundaries and obstacles
+        if (move[0] < 0 || move[0] >= 7 || move[1] < 0 || move[1] >= 7 || isObstacleCell(move[0], move[1])) {
+            return false;
+        }
+    
+        // Check collision with other entities
+        for (let other of entities) {
+            if (other !== entity && isSameCell(move, other.cell)) {
+                // Allow moving into the cell if the other entity is "IT" and the current entity is not
+                if (other.isIt && !entity.isIt) {
+                    return true;
+                }
+                return false;
+            }
+        }
+    
+        return true;
+    }
+    
+    
 
     function isObstacleCell(row, col) {
         return row === obstacleCell[0] && col === obstacleCell[1];
     }
 
-    function calculateDistance(cell1, cell2) {
-        return Math.pow(cell1[0] - cell2[0], 2) + Math.pow(cell1[1] - cell2[1], 2);
-    }
-
-    function isValidMove(move) {
-        return move[0] >= 0 && move[0] < 7 && move[1] >= 0 && move[1] < 7 && !isObstacleCell(move[0], move[1]);
-    }
-
-    function isSameCell(cell1, cell2) {
-        return cell1 && cell2 && cell1[0] === cell2[0] && cell1[1] === cell2[1];
-    }
+    updateObstacle(); // Initialize the obstacle's position
+    updateCells();    // Update cells initially
+    gameLoop();       // Start the game loop
 });
